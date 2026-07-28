@@ -1,0 +1,95 @@
+2026-07-28 01:30:12 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 01:30:13 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 01:30:13 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 01:47:47 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 01:47:47 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 01:47:47 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 01:51:33 | INFO     | ai_studio.app.models.project_model | Đã khởi tạo ProjectModel. project=test, scenes=0
+2026-07-28 01:51:33 | INFO     | ai_studio.app.services.history_service | Đã khởi tạo lịch sử. description=Mở dự án
+2026-07-28 01:51:56 | DEBUG    | ai_studio.app.models.project_model | Đã cập nhật chủ đề dự án.
+2026-07-28 01:51:56 | INFO     | ai_studio.app.models.project_model | AI tạo kịch bản. scene_count=5
+2026-07-28 01:51:56 | INFO     | ai_studio.app.services.history_service | Đã lưu lịch sử. description=AI tạo kịch bản, undo_count=1
+2026-07-28 01:59:43 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 01:59:43 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 01:59:43 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 02:09:33 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 02:09:33 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 02:09:33 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 02:15:19 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 02:15:19 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 02:15:19 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 02:16:54 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 02:16:55 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 02:16:55 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 02:31:33 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 02:31:33 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 02:31:33 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 06:55:13 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 06:55:14 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 06:55:14 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 06:57:49 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 06:57:49 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 06:57:49 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 07:13:53 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 07:13:53 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 07:13:53 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 07:32:41 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 07:32:41 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 07:32:41 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 08:25:35 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 08:25:35 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 08:25:35 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 08:52:29 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 08:52:29 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 08:52:29 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 08:53:09 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 08:53:09 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 08:53:09 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 08:53:27 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 08:53:27 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 08:53:27 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 09:04:56 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 09:04:57 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 09:04:57 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 09:14:46 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 09:14:46 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 09:14:46 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 09:23:53 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 09:23:54 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 09:23:54 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 09:28:51 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 09:28:52 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 09:28:52 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 09:35:37 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 09:35:37 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 09:35:37 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 09:36:23 | INFO     | ai_studio.app.models.project_model | Đã khởi tạo ProjectModel. project=films, scenes=0
+2026-07-28 09:36:23 | INFO     | ai_studio.app.services.history_service | Đã khởi tạo lịch sử. description=Mở dự án
+2026-07-28 09:36:49 | INFO     | ai_studio.app.models.project_model | Đã khởi tạo ProjectModel. project=films, scenes=0
+2026-07-28 09:36:49 | INFO     | ai_studio.app.services.history_service | Đã khởi tạo lịch sử. description=Mở dự án
+2026-07-28 09:37:00 | INFO     | ai_studio.app.models.project_model | Đã khởi tạo ProjectModel. project=test, scenes=0
+2026-07-28 09:37:00 | INFO     | ai_studio.app.services.history_service | Đã khởi tạo lịch sử. description=Mở dự án
+2026-07-28 09:50:04 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 09:50:05 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 09:50:05 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 09:51:24 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 09:51:25 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 09:51:25 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 10:10:25 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 10:10:25 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 10:10:25 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 10:53:39 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 10:53:39 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 10:53:39 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 13:24:36 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 13:24:36 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 13:24:36 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 14:57:14 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 14:57:15 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 14:57:15 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 16:48:10 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 16:48:11 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 16:48:11 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100
+2026-07-28 17:07:51 | INFO     | ai_studio | Logger của AI Studio đã được khởi tạo.
+2026-07-28 17:07:51 | INFO     | ai_studio.app.models.project_model | ProjectModel đã được khởi tạo.
+2026-07-28 17:07:51 | INFO     | ai_studio.app.services.history_service | HistoryService đã được khởi tạo. max_history=100

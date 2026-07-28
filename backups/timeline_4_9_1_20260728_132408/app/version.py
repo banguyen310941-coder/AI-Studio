@@ -1,0 +1,3 @@
+APP_NAME = "AI Studio"
+APP_VERSION = "4.9.0-part2"
+WINDOW_TITLE = f"{APP_NAME} {APP_VERSION}"
