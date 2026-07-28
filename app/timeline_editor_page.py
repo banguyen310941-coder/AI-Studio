@@ -30,10 +30,11 @@ from app.services.timeline_service import TimelineService
 from app.timeline_preview_widget import TimelinePreviewWidget
 from app.timeline_canvas import TimelineCanvas
 from app.timeline_track_manager import TrackManagerWidget
+from app.widgets.transition_studio_widget import TransitionStudioWidget
 
 
 class TimelineEditorPage(QWidget):
-    """Timeline Editor 4.9.4: Track Manager, lock, mute, ẩn/hiện và màu."""
+    """Timeline Editor 4.9.5: Track Manager và Transition Studio."""
 
     back_requested = Signal()
 
@@ -151,6 +152,11 @@ class TimelineEditorPage(QWidget):
         self.track_manager = TrackManagerWidget(self.service, self)
         self.track_manager.track_changed.connect(self._track_changed)
         root.addWidget(self.track_manager)
+
+        self.transition_studio = TransitionStudioWidget(self.service, self)
+        self.transition_studio.transition_changed.connect(self._transition_changed)
+        self.transition_studio.seek_requested.connect(self.preview.set_playhead)
+        root.addWidget(self.transition_studio)
 
         self.canvas = TimelineCanvas(self.service, self)
         root.addWidget(self.canvas)
@@ -539,6 +545,7 @@ class TimelineEditorPage(QWidget):
         self.preview.refresh()
         self.track_manager.refresh()
         self.canvas.refresh()
+        self.transition_studio.refresh()
         self._refresh_table(select_clip_id)
         self._refresh_summary()
         if select_clip_id:
@@ -641,6 +648,11 @@ class TimelineEditorPage(QWidget):
         self._refresh_table(self._selected_clip_id)
         self._refresh_summary()
         self._show_preview_status("Đã cập nhật Track")
+
+    def _transition_changed(self) -> None:
+        self.canvas.refresh()
+        self._refresh_summary()
+
 
     def _select_clip_from_canvas(self, clip_id: str) -> None:
         self._selected_clip_id = clip_id

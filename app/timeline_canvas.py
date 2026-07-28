@@ -262,6 +262,7 @@ class TimelineCanvas(QGraphicsView):
         for index, track in enumerate(tracks):
             self._draw_track(index, track)
 
+        self._draw_transitions(tracks)
         self._draw_playhead()
 
     def set_zoom(self, zoom: float) -> None:
@@ -373,6 +374,54 @@ class TimelineCanvas(QGraphicsView):
             item.split_requested.connect(self.split_requested.emit)
             item.delete_requested.connect(self.delete_requested.emit)
             self.scene_object.addItem(item)
+
+
+    def _draw_transitions(self, tracks: list[dict[str, Any]]) -> None:
+        """Vẽ marker transition trên timeline tại điểm nối hai clip."""
+        visible_track_ids = {str(track.get("id", "")) for track in tracks}
+        for transition in self.service.data.get("transitions", []):
+            if not transition.get("enabled", True):
+                continue
+            from_result = self.service.find_clip(str(transition.get("from_clip_id", "")))
+            to_result = self.service.find_clip(str(transition.get("to_clip_id", "")))
+            if from_result is None or to_result is None:
+                continue
+            from_track, from_clip = from_result
+            to_track, to_clip = to_result
+            if str(from_track.get("id", "")) not in visible_track_ids:
+                continue
+            try:
+                track_index = tracks.index(from_track)
+            except ValueError:
+                continue
+            from_end = float(from_clip.get("start", 0.0)) + float(from_clip.get("duration", 0.0))
+            to_start = float(to_clip.get("start", 0.0))
+            center = max(0.0, (from_end + to_start) / 2.0)
+            duration = max(0.1, float(transition.get("duration", 1.0)))
+            x = self.geometry_config.label_width + center * self.geometry_config.pixels_per_second
+            y = (
+                self.geometry_config.ruler_height
+                + track_index * (self.geometry_config.track_height + self.geometry_config.track_gap)
+                + self.geometry_config.track_height / 2.0
+            )
+            half_width = max(8.0, duration * self.geometry_config.pixels_per_second / 2.0)
+            polygon = [
+                QPointF(x - half_width, y),
+                QPointF(x, y - 13.0),
+                QPointF(x + half_width, y),
+                QPointF(x, y + 13.0),
+            ]
+            from PySide6.QtGui import QPolygonF
+            item = self.scene_object.addPolygon(
+                QPolygonF(polygon),
+                QPen(QColor("#ffd166"), 1.5),
+                QColor(255, 209, 102, 115),
+            )
+            item.setToolTip(
+                f'Transition: {transition.get("type", "cross_dissolve")}\n'
+                f'Thời lượng: {duration:.2f}s\n'
+                f'Easing: {transition.get("easing", "ease-in-out")}'
+            )
 
     def _draw_playhead(self) -> None:
         playhead = float(self.service.data.get("playhead", 0.0))

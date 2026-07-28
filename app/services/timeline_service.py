@@ -35,12 +35,13 @@ class TimelineService:
     @staticmethod
     def _new_document() -> dict[str, Any]:
         return {
-            "schema_version": 1,
+            "schema_version": 2,
             "fps": 30,
             "duration": 60.0,
             "zoom": 1.0,
             "playhead": 0.0,
             "tracks": deepcopy(DEFAULT_TRACKS),
+            "transitions": [],
         }
 
     @property
@@ -334,6 +335,8 @@ class TimelineService:
             track.setdefault("locked", False)
             track.setdefault("muted", False)
             track.setdefault("visible", True)
+        raw.setdefault("transitions", [])
+        raw["schema_version"] = max(2, int(raw.get("schema_version", 1)))
         self._data = raw
         self.current_path = source
         return self._data
@@ -362,6 +365,8 @@ class TimelineService:
     def _validate(data: Any) -> None:
         if not isinstance(data, dict):
             raise ValueError("Timeline phải là một JSON object.")
+        if "transitions" in data and not isinstance(data.get("transitions"), list):
+            raise ValueError("Danh sách transition không hợp lệ.")
         if not isinstance(data.get("tracks"), list):
             raise ValueError("Timeline thiếu danh sách tracks.")
         for track in data["tracks"]:
