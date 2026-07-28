@@ -1,0 +1,27 @@
+{
+    "openai": {
+        "api_key": "",
+        "image_model": "gpt-image-1",
+        "voice_model": "gpt-4o-mini-tts",
+        "voice": "nova"
+    },
+    "image": {
+        "size": "1536x1024",
+        "quality": "medium"
+    },
+    "video": {
+        "width": 1360,
+        "height": 720,
+        "fps": 24
+    },
+    "subtitle": {
+        "enabled": true,
+        "font_name": "Arial",
+        "font_size": 22,
+        "margin_bottom": 42,
+        "max_words_per_caption": 8
+    },
+    "project": {
+        "directory": "projects"
+    }
+}
