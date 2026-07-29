@@ -33,6 +33,7 @@ from app.timeline_track_manager import TrackManagerWidget
 from app.widgets.transition_studio_widget import TransitionStudioWidget
 from app.widgets.audio_mixer_widget import AudioMixerWidget
 from app.widgets.color_correction_widget import ColorCorrectionWidget
+from app.widgets.lut_manager_widget import LUTManagerWidget
 
 
 class TimelineEditorPage(QWidget):
@@ -165,6 +166,10 @@ class TimelineEditorPage(QWidget):
         self.color_correction = ColorCorrectionWidget(self.service, self)
         self.color_correction.color_changed.connect(self._color_changed)
         root.addWidget(self.color_correction)
+
+        self.lut_manager = LUTManagerWidget(self.service, self)
+        self.lut_manager.lut_changed.connect(self._lut_changed)
+        root.addWidget(self.lut_manager)
 
         self.transition_studio = TransitionStudioWidget(self.service, self)
         self.transition_studio.transition_changed.connect(self._transition_changed)
@@ -562,6 +567,7 @@ class TimelineEditorPage(QWidget):
         self.transition_studio.refresh()
         self.audio_mixer.refresh()
         self.color_correction.select_clip(select_clip_id or self._selected_clip_id)
+        self.lut_manager.select_clip(select_clip_id or self._selected_clip_id)
         self._refresh_table(select_clip_id)
         self._refresh_summary()
         if select_clip_id:
@@ -676,6 +682,11 @@ class TimelineEditorPage(QWidget):
         self.canvas.refresh()
         self._show_preview_status("Đã cập nhật Color Correction")
 
+    def _lut_changed(self) -> None:
+        self.preview.refresh()
+        self.canvas.refresh()
+        self._show_preview_status("Đã cập nhật LUT")
+
     def _transition_changed(self) -> None:
         self.canvas.refresh()
         self._refresh_summary()
@@ -700,6 +711,7 @@ class TimelineEditorPage(QWidget):
         self._refresh_table(select_clip_id=clip_id)
         self._load_selected_clip_into_inspector()
         self.color_correction.select_clip(clip_id)
+        self.lut_manager.select_clip(clip_id)
 
     def _canvas_clip_changed(
         self,
