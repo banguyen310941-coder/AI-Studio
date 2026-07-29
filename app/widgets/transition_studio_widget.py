@@ -44,7 +44,7 @@ class TransitionStudioWidget(QFrame):
         root.setSpacing(10)
 
         title_row = QHBoxLayout()
-        title = QLabel("Transition Studio 4.9.5", self)
+        title = QLabel("Transition Studio 4.9.5.3", self)
         title.setObjectName("sectionTitle")
         self.summary_label = QLabel(self)
         self.summary_label.setObjectName("description")
@@ -92,10 +92,22 @@ class TransitionStudioWidget(QFrame):
         delete_button.clicked.connect(self._delete_transition)
         preview_button = QPushButton("Tới transition", self)
         preview_button.clicked.connect(self._seek_transition)
+        duplicate_button = QPushButton("Nhân sang cặp sau", self)
+        duplicate_button.clicked.connect(self._duplicate_transition)
+        auto_button = QPushButton("Tự nối toàn bộ", self)
+        auto_button.clicked.connect(self._auto_add_all)
+        enable_all_button = QPushButton("Bật tất cả", self)
+        enable_all_button.clicked.connect(lambda: self._set_all_enabled(True))
+        disable_all_button = QPushButton("Tắt tất cả", self)
+        disable_all_button.clicked.connect(lambda: self._set_all_enabled(False))
         button_box.addWidget(add_button)
         button_box.addWidget(apply_button)
         button_box.addWidget(delete_button)
         button_box.addWidget(preview_button)
+        button_box.addWidget(duplicate_button)
+        button_box.addWidget(auto_button)
+        button_box.addWidget(enable_all_button)
+        button_box.addWidget(disable_all_button)
         button_box.addStretch()
         form_row.addLayout(button_box)
         root.addLayout(form_row)
@@ -116,6 +128,11 @@ class TransitionStudioWidget(QFrame):
         self.filter_label.setObjectName("description")
         self.filter_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         root.addWidget(self.filter_label)
+
+        self.validation_label = QLabel("Dữ liệu transition hợp lệ", self)
+        self.validation_label.setObjectName("description")
+        self.validation_label.setWordWrap(True)
+        root.addWidget(self.validation_label)
 
     def refresh(self) -> None:
         self.service.ensure_document()
@@ -148,6 +165,11 @@ class TransitionStudioWidget(QFrame):
             self.summary_label.setText(
                 f"{summary.count} transition · {summary.total_duration:.2f} giây"
             )
+            issues = self.service.validate()
+            if issues:
+                self.validation_label.setText("⚠ " + " · ".join(issues[:3]))
+            else:
+                self.validation_label.setText("✓ Dữ liệu transition hợp lệ")
         finally:
             self._loading = False
 
@@ -196,6 +218,40 @@ class TransitionStudioWidget(QFrame):
             self.transition_changed.emit()
         except (ValueError, KeyError) as exc:
             QMessageBox.warning(self, "Transition Studio", str(exc))
+
+    def _auto_add_all(self) -> None:
+        try:
+            count = self.service.add_all_adjacent(
+                transition_type=str(self.type_combo.currentData() or "cross_dissolve"),
+                duration=self.duration_spin.value(),
+                easing=str(self.easing_combo.currentData() or "ease-in-out"),
+            )
+            self.refresh()
+            self.transition_changed.emit()
+            QMessageBox.information(
+                self,
+                "Transition Studio",
+                f"Đã tạo hoặc cập nhật {count} transition giữa các clip liền nhau.",
+            )
+        except (ValueError, KeyError) as exc:
+            QMessageBox.warning(self, "Transition Studio", str(exc))
+
+    def _duplicate_transition(self) -> None:
+        if not self._selected_id:
+            QMessageBox.information(self, "Transition Studio", "Hãy chọn một transition trước.")
+            return
+        try:
+            transition = self.service.duplicate(self._selected_id)
+            self._selected_id = str(transition.get("id", ""))
+            self.refresh()
+            self.transition_changed.emit()
+        except (ValueError, KeyError) as exc:
+            QMessageBox.warning(self, "Transition Studio", str(exc))
+
+    def _set_all_enabled(self, enabled: bool) -> None:
+        self.service.set_all_enabled(enabled)
+        self.refresh()
+        self.transition_changed.emit()
 
     def _apply_transition(self) -> None:
         if not self._selected_id:
