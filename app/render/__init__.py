@@ -8,3 +8,6 @@ __all__ = [
     "RenderJob", "RenderJobStatus", "RenderQueueManager", "RenderCache",
     "ResourceMonitor", "ResourceSnapshot", "BackgroundRenderManager",
 ]
+
+from .gpu_detector import GPUDetector, GPUEncoder
+from .render_settings import RenderSettings, RenderSettingsStore

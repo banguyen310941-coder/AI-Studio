@@ -9,6 +9,7 @@ from typing import Callable
 
 from app.render.render_cache import RenderCache
 from app.render.render_job import RenderJob, RenderJobStatus
+from app.render.render_settings import RenderSettings
 from app.render.render_queue import RenderQueueManager
 from app.render.resource_monitor import ResourceMonitor, ResourceSnapshot
 from app.transitions.render_executor import RenderResult, TransitionRenderExecutor
@@ -154,6 +155,7 @@ class BackgroundRenderManager(RenderQueueManager):
                 job.to_plan(),
                 job.output_path,
                 progress_callback=lambda value, message: self._progress(job, value, message),
+                extra_args=RenderSettings.from_dict(job.render_settings).ffmpeg_args(self.ffmpeg_path),
             )
         except Exception as exc:
             result = RenderResult(False, Path(job.output_path), -1, message=str(exc))

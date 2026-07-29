@@ -30,11 +30,12 @@ class RenderJob:
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     started_at: str | None = None
     finished_at: str | None = None
+    render_settings: dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def from_plan(cls, plan: RenderPlan, output_path: str | Path, name: str = "") -> "RenderJob":
+    def from_plan(cls, plan: RenderPlan, output_path: str | Path, name: str = "", render_settings: dict[str, str] | None = None) -> "RenderJob":
         target = Path(output_path).expanduser()
-        return cls(name=name.strip() or target.stem or "Render", output_path=str(target), plan_data=plan.to_dict())
+        return cls(name=name.strip() or target.stem or "Render", output_path=str(target), plan_data=plan.to_dict(), render_settings=dict(render_settings or {}))
 
     def to_plan(self) -> RenderPlan:
         clips = [RenderClip(**item) for item in self.plan_data.get("clips", [])]

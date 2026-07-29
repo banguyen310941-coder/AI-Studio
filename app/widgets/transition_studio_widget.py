@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
+    QDialog,
     QFormLayout,
     QFrame,
     QHBoxLayout,
@@ -30,6 +31,8 @@ from app.transitions.transition_service import TransitionService
 from app.render.render_job import RenderJob
 from app.render.background_manager import BackgroundRenderManager
 from app.widgets.render_queue_widget import RenderQueueDialog
+from app.widgets.gpu_settings_widget import GPUSettingsDialog
+from app.render.render_settings import RenderSettingsStore
 
 
 class TransitionStudioWidget(QFrame):
@@ -51,6 +54,8 @@ class TransitionStudioWidget(QFrame):
         self._render_thread: threading.Thread | None = None
         self._queue_manager = BackgroundRenderManager()
         self._queue_dialog: RenderQueueDialog | None = None
+        self._render_settings_store = RenderSettingsStore()
+        self._render_settings = self._render_settings_store.load()
         self.render_progress.connect(self._on_render_progress)
         self.render_finished.connect(self._on_render_finished)
         self.render_log.connect(self._on_render_log)
@@ -63,7 +68,7 @@ class TransitionStudioWidget(QFrame):
         root.setSpacing(10)
 
         title_row = QHBoxLayout()
-        title = QLabel("Transition Studio 4.9.5.8", self)
+        title = QLabel("Transition Studio 4.9.5.9", self)
         title.setObjectName("sectionTitle")
         self.summary_label = QLabel(self)
         self.summary_label.setObjectName("description")
@@ -134,6 +139,8 @@ class TransitionStudioWidget(QFrame):
         queue_add_button.clicked.connect(self._add_to_render_queue)
         queue_open_button = QPushButton("Mở Background Tasks", self)
         queue_open_button.clicked.connect(self._open_render_queue)
+        gpu_settings_button = QPushButton("⚡ GPU Render Settings", self)
+        gpu_settings_button.clicked.connect(self._open_gpu_settings)
         save_preset_button = QPushButton("Lưu preset cá nhân", self)
         save_preset_button.clicked.connect(self._save_user_preset)
         apply_preset_button = QPushButton("Áp dụng preset đã chọn", self)
@@ -159,6 +166,7 @@ class TransitionStudioWidget(QFrame):
         button_box.addWidget(self.cancel_render_button)
         button_box.addWidget(queue_add_button)
         button_box.addWidget(queue_open_button)
+        button_box.addWidget(gpu_settings_button)
         button_box.addWidget(save_preset_button)
         button_box.addWidget(apply_preset_button)
         button_box.addWidget(favorite_preset_button)
@@ -493,6 +501,16 @@ class TransitionStudioWidget(QFrame):
         QMessageBox.information(self, "Transition Studio", f"Đã xuất Render Plan:\n{target}")
 
 
+
+    def _open_gpu_settings(self) -> None:
+        dialog = GPUSettingsDialog(self._render_settings, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        self._render_settings = dialog.settings()
+        self._render_settings_store.save(self._render_settings)
+        codec = self._render_settings.resolve_codec()
+        self.render_status_label.setText(f"GPU Render: {codec} · profile {self._render_settings.profile_id}")
+
     def _add_to_render_queue(self) -> None:
         try:
             plan = self.service.build_render_plan()
@@ -505,7 +523,7 @@ class TransitionStudioWidget(QFrame):
             return
         if not filename.lower().endswith(".mp4"):
             filename += ".mp4"
-        job = RenderJob.from_plan(plan, filename)
+        job = RenderJob.from_plan(plan, filename, render_settings=self._render_settings.to_dict())
         self._queue_manager.add(job)
         self.render_status_label.setText(f"Đã thêm vào Render Queue: {job.name}")
         self._open_render_queue()
@@ -563,6 +581,7 @@ class TransitionStudioWidget(QFrame):
                     filename,
                     progress_callback=lambda value, message: self.render_progress.emit(value, message),
                     log_callback=self.render_log.emit,
+                    extra_args=self._render_settings.ffmpeg_args(executor.ffmpeg_path),
                 )
             except Exception as exc:  # lỗi hệ thống/FFmpeg được báo về UI
                 result = RenderResult(False, Path(filename), -1, message=str(exc))
