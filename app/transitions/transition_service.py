@@ -6,6 +6,7 @@ from typing import Any
 from app.transitions.transition_model import TransitionModel
 from app.transitions.transition_registry import TransitionRegistry
 from app.transitions.xfade import XFadeCompiler
+from app.transitions.render_plan import TransitionRenderPlanner
 
 
 @dataclass(slots=True)
@@ -255,6 +256,23 @@ class TransitionService:
         from_end = float(from_clip.get("start", 0.0)) + float(from_clip.get("duration", 0.0))
         to_start = float(to_clip.get("start", 0.0))
         return max(0.0, (from_end + to_start) / 2.0)
+
+
+    def build_render_plan(self, *, track_id: str | None = None, include_audio: bool = True):
+        """Tạo RenderPlan FFmpeg cho video track và transition đang bật."""
+        return TransitionRenderPlanner(self.timeline_service, self.registry).build(
+            track_id=track_id, include_audio=include_audio
+        )
+
+    def export_render_plan(
+        self,
+        path: str,
+        *,
+        track_id: str | None = None,
+        include_audio: bool = True,
+    ) -> str:
+        plan = self.build_render_plan(track_id=track_id, include_audio=include_audio)
+        return str(plan.save(path))
 
     def xfade_filter(self, transition_id: str) -> str:
         transition = self.get(transition_id)

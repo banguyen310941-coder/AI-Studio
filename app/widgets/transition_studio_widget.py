@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMessageBox,
+    QFileDialog,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -44,7 +45,7 @@ class TransitionStudioWidget(QFrame):
         root.setSpacing(10)
 
         title_row = QHBoxLayout()
-        title = QLabel("Transition Studio 4.9.5.3", self)
+        title = QLabel("Transition Studio 4.9.5.4", self)
         title.setObjectName("sectionTitle")
         self.summary_label = QLabel(self)
         self.summary_label.setObjectName("description")
@@ -100,6 +101,8 @@ class TransitionStudioWidget(QFrame):
         enable_all_button.clicked.connect(lambda: self._set_all_enabled(True))
         disable_all_button = QPushButton("Tắt tất cả", self)
         disable_all_button.clicked.connect(lambda: self._set_all_enabled(False))
+        render_plan_button = QPushButton("Xuất Render Plan", self)
+        render_plan_button.clicked.connect(self._export_render_plan)
         button_box.addWidget(add_button)
         button_box.addWidget(apply_button)
         button_box.addWidget(delete_button)
@@ -108,6 +111,7 @@ class TransitionStudioWidget(QFrame):
         button_box.addWidget(auto_button)
         button_box.addWidget(enable_all_button)
         button_box.addWidget(disable_all_button)
+        button_box.addWidget(render_plan_button)
         button_box.addStretch()
         form_row.addLayout(button_box)
         root.addLayout(form_row)
