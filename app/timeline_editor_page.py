@@ -34,6 +34,7 @@ from app.widgets.transition_studio_widget import TransitionStudioWidget
 from app.widgets.audio_mixer_widget import AudioMixerWidget
 from app.widgets.color_correction_widget import ColorCorrectionWidget
 from app.widgets.lut_manager_widget import LUTManagerWidget
+from app.widgets.keyframe_animation_widget import KeyframeAnimationWidget
 
 
 class TimelineEditorPage(QWidget):
@@ -170,6 +171,10 @@ class TimelineEditorPage(QWidget):
         self.lut_manager = LUTManagerWidget(self.service, self)
         self.lut_manager.lut_changed.connect(self._lut_changed)
         root.addWidget(self.lut_manager)
+
+        self.keyframe_animation = KeyframeAnimationWidget(self.service, self)
+        self.keyframe_animation.animation_changed.connect(self._animation_changed)
+        root.addWidget(self.keyframe_animation)
 
         self.transition_studio = TransitionStudioWidget(self.service, self)
         self.transition_studio.transition_changed.connect(self._transition_changed)
@@ -568,6 +573,7 @@ class TimelineEditorPage(QWidget):
         self.audio_mixer.refresh()
         self.color_correction.select_clip(select_clip_id or self._selected_clip_id)
         self.lut_manager.select_clip(select_clip_id or self._selected_clip_id)
+        self.keyframe_animation.select_clip(select_clip_id or self._selected_clip_id)
         self._refresh_table(select_clip_id)
         self._refresh_summary()
         if select_clip_id:
@@ -687,6 +693,11 @@ class TimelineEditorPage(QWidget):
         self.canvas.refresh()
         self._show_preview_status("Đã cập nhật LUT")
 
+    def _animation_changed(self) -> None:
+        self.preview.refresh()
+        self.canvas.refresh()
+        self._show_preview_status("Đã cập nhật Keyframe Animation")
+
     def _transition_changed(self) -> None:
         self.canvas.refresh()
         self._refresh_summary()
@@ -712,6 +723,7 @@ class TimelineEditorPage(QWidget):
         self._load_selected_clip_into_inspector()
         self.color_correction.select_clip(clip_id)
         self.lut_manager.select_clip(clip_id)
+        self.keyframe_animation.select_clip(clip_id)
 
     def _canvas_clip_changed(
         self,

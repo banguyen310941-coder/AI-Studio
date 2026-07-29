@@ -346,6 +346,7 @@ class TimelineService:
             for clip in track.get("clips", []):
                 clip.setdefault("fade_in", 0.0)
                 clip.setdefault("fade_out", 0.0)
+                clip.setdefault("keyframes", [])
         raw.setdefault("transitions", [])
         raw["schema_version"] = max(2, int(raw.get("schema_version", 1)))
         self._data = raw
