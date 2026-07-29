@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtGui import QColor, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import (
     QGraphicsItem,
     QGraphicsObject,
@@ -13,6 +13,8 @@ from PySide6.QtWidgets import (
     QMenu,
     QWidget,
 )
+
+from app.transitions.transition_service import TransitionService
 
 
 @dataclass(slots=True)
@@ -204,6 +206,116 @@ class TimelineClipItem(QGraphicsObject):
         )
 
 
+class TimelineTransitionItem(QGraphicsObject):
+    """Marker transition có thể chọn, kéo hai cạnh để đổi thời lượng và xóa."""
+
+    selected_transition = Signal(str)
+    duration_changed = Signal(str, float)
+    delete_requested = Signal(str)
+
+    HANDLE_WIDTH = 8.0
+
+    def __init__(
+        self,
+        transition: dict[str, Any],
+        geometry: TimelineGeometry,
+        parent: QGraphicsItem | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.transition = transition
+        self.transition_id = str(transition.get("id", ""))
+        self.geometry = geometry
+        self._resizing_left = False
+        self._resizing_right = False
+        self._press_scene_x = 0.0
+        self._original_duration = float(transition.get("duration", 1.0))
+        self.setFlags(
+            QGraphicsItem.GraphicsItemFlag.ItemIsSelectable
+            | QGraphicsItem.GraphicsItemFlag.ItemIsFocusable
+        )
+        self.setAcceptHoverEvents(True)
+        self.setZValue(30.0)
+        self.setToolTip(self._tooltip())
+
+    def boundingRect(self) -> QRectF:
+        width = max(18.0, float(self.transition.get("duration", 1.0)) * self.geometry.pixels_per_second)
+        return QRectF(-width / 2.0, -14.0, width, 28.0)
+
+    def paint(self, painter: QPainter, option, widget=None) -> None:
+        del option, widget
+        rect = self.boundingRect()
+        color = QColor("#ffd166")
+        if not self.transition.get("enabled", True):
+            color.setAlpha(85)
+        elif self.isSelected():
+            color = color.lighter(120)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(QColor("#ffffff") if self.isSelected() else color.darker(145), 2.0))
+        painter.setBrush(color)
+        polygon = QPolygonF([
+            QPointF(rect.left(), 0.0),
+            QPointF(0.0, rect.top()),
+            QPointF(rect.right(), 0.0),
+            QPointF(0.0, rect.bottom()),
+        ])
+        painter.drawPolygon(polygon)
+        painter.fillRect(QRectF(rect.left(), rect.top(), self.HANDLE_WIDTH, rect.height()), color.lighter(130))
+        painter.fillRect(QRectF(rect.right() - self.HANDLE_WIDTH, rect.top(), self.HANDLE_WIDTH, rect.height()), color.lighter(130))
+
+    def hoverMoveEvent(self, event) -> None:
+        x = event.position().x()
+        rect = self.boundingRect()
+        if x <= rect.left() + self.HANDLE_WIDTH or x >= rect.right() - self.HANDLE_WIDTH:
+            self.setCursor(Qt.CursorShape.SizeHorCursor)
+        else:
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
+        super().hoverMoveEvent(event)
+
+    def mousePressEvent(self, event) -> None:
+        self.selected_transition.emit(self.transition_id)
+        self._press_scene_x = event.scenePos().x()
+        self._original_duration = float(self.transition.get("duration", 1.0))
+        rect = self.boundingRect()
+        x = event.position().x()
+        self._resizing_left = x <= rect.left() + self.HANDLE_WIDTH
+        self._resizing_right = x >= rect.right() - self.HANDLE_WIDTH
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event) -> None:
+        if not (self._resizing_left or self._resizing_right):
+            event.accept()
+            return
+        delta = (event.scenePos().x() - self._press_scene_x) / self.geometry.pixels_per_second
+        duration = self._original_duration + (2.0 * delta if self._resizing_right else -2.0 * delta)
+        duration = round(max(0.1, min(10.0, duration)), 3)
+        self.prepareGeometryChange()
+        self.transition["duration"] = duration
+        self.setToolTip(self._tooltip())
+        self.update()
+        event.accept()
+
+    def mouseReleaseEvent(self, event) -> None:
+        if self._resizing_left or self._resizing_right:
+            self.duration_changed.emit(self.transition_id, float(self.transition.get("duration", 1.0)))
+        self._resizing_left = False
+        self._resizing_right = False
+        super().mouseReleaseEvent(event)
+
+    def contextMenuEvent(self, event) -> None:
+        menu = QMenu()
+        delete_action = menu.addAction("Xóa transition")
+        if menu.exec(event.screenPos()) == delete_action:
+            self.delete_requested.emit(self.transition_id)
+
+    def _tooltip(self) -> str:
+        return (
+            f'Transition: {self.transition.get("type", "cross_dissolve")}\n'
+            f'Thời lượng: {float(self.transition.get("duration", 1.0)):.2f}s\n'
+            f'Easing: {self.transition.get("easing", "ease-in-out")}\n'
+            'Kéo hai cạnh để thay đổi thời lượng.'
+        )
+
+
 class TimelineCanvas(QGraphicsView):
     """Canvas đồ họa cho drag, resize, snap, split và playhead."""
 
@@ -213,10 +325,14 @@ class TimelineCanvas(QGraphicsView):
     split_requested = Signal(str)
     delete_requested = Signal(str)
     seek_requested = Signal(float)
+    transition_selected = Signal(str)
+    transition_changed = Signal(str, float)
+    transition_delete_requested = Signal(str)
 
     def __init__(self, service, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.service = service
+        self.transition_service = TransitionService(service)
         self.geometry_config = TimelineGeometry()
         self.scene_object = QGraphicsScene(self)
         self.setScene(self.scene_object)
@@ -377,51 +493,34 @@ class TimelineCanvas(QGraphicsView):
 
 
     def _draw_transitions(self, tracks: list[dict[str, Any]]) -> None:
-        """Vẽ marker transition trên timeline tại điểm nối hai clip."""
+        """Vẽ marker transition tương tác tại điểm nối hai clip."""
         visible_track_ids = {str(track.get("id", "")) for track in tracks}
-        for transition in self.service.data.get("transitions", []):
-            if not transition.get("enabled", True):
-                continue
+        self.transition_service.clean_orphans()
+        for transition in self.transition_service.data:
             from_result = self.service.find_clip(str(transition.get("from_clip_id", "")))
             to_result = self.service.find_clip(str(transition.get("to_clip_id", "")))
             if from_result is None or to_result is None:
                 continue
-            from_track, from_clip = from_result
-            to_track, to_clip = to_result
+            from_track, _ = from_result
             if str(from_track.get("id", "")) not in visible_track_ids:
                 continue
             try:
                 track_index = tracks.index(from_track)
             except ValueError:
                 continue
-            from_end = float(from_clip.get("start", 0.0)) + float(from_clip.get("duration", 0.0))
-            to_start = float(to_clip.get("start", 0.0))
-            center = max(0.0, (from_end + to_start) / 2.0)
-            duration = max(0.1, float(transition.get("duration", 1.0)))
+            center = self.transition_service.transition_time(transition)
             x = self.geometry_config.label_width + center * self.geometry_config.pixels_per_second
             y = (
                 self.geometry_config.ruler_height
                 + track_index * (self.geometry_config.track_height + self.geometry_config.track_gap)
                 + self.geometry_config.track_height / 2.0
             )
-            half_width = max(8.0, duration * self.geometry_config.pixels_per_second / 2.0)
-            polygon = [
-                QPointF(x - half_width, y),
-                QPointF(x, y - 13.0),
-                QPointF(x + half_width, y),
-                QPointF(x, y + 13.0),
-            ]
-            from PySide6.QtGui import QPolygonF
-            item = self.scene_object.addPolygon(
-                QPolygonF(polygon),
-                QPen(QColor("#ffd166"), 1.5),
-                QColor(255, 209, 102, 115),
-            )
-            item.setToolTip(
-                f'Transition: {transition.get("type", "cross_dissolve")}\n'
-                f'Thời lượng: {duration:.2f}s\n'
-                f'Easing: {transition.get("easing", "ease-in-out")}'
-            )
+            item = TimelineTransitionItem(transition, self.geometry_config)
+            item.setPos(x, y)
+            item.selected_transition.connect(self.transition_selected.emit)
+            item.duration_changed.connect(self.transition_changed.emit)
+            item.delete_requested.connect(self.transition_delete_requested.emit)
+            self.scene_object.addItem(item)
 
     def _draw_playhead(self) -> None:
         playhead = float(self.service.data.get("playhead", 0.0))

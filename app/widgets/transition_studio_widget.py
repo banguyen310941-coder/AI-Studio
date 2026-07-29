@@ -112,6 +112,11 @@ class TransitionStudioWidget(QFrame):
         self.table.setMaximumHeight(170)
         root.addWidget(self.table)
 
+        self.filter_label = QLabel("FFmpeg: chưa chọn transition", self)
+        self.filter_label.setObjectName("description")
+        self.filter_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        root.addWidget(self.filter_label)
+
     def refresh(self) -> None:
         self.service.ensure_document()
         self.service.clean_orphans()
@@ -145,6 +150,17 @@ class TransitionStudioWidget(QFrame):
             )
         finally:
             self._loading = False
+
+
+    def select_transition(self, transition_id: str) -> None:
+        """Chọn transition từ Timeline Canvas và đồng bộ Inspector."""
+        self._selected_id = transition_id
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
+            if item and str(item.data(Qt.ItemDataRole.UserRole) or "") == transition_id:
+                self.table.selectRow(row)
+                self._selection_changed()
+                return
 
     def _refresh_clip_combos(self) -> None:
         current_from = self.from_combo.currentData()
@@ -226,6 +242,10 @@ class TransitionStudioWidget(QFrame):
             self.duration_spin.setValue(float(transition.get("duration", 1.0)))
             self._set_combo_data(self.easing_combo, transition.get("easing"))
             self.enabled_check.setChecked(bool(transition.get("enabled", True)))
+            try:
+                self.filter_label.setText(f"FFmpeg: {self.service.xfade_filter(transition_id)}")
+            except (KeyError, ValueError):
+                self.filter_label.setText("FFmpeg: không thể biên dịch transition")
         finally:
             self._loading = False
 

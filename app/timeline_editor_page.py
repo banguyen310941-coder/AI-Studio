@@ -34,7 +34,7 @@ from app.widgets.transition_studio_widget import TransitionStudioWidget
 
 
 class TimelineEditorPage(QWidget):
-    """Timeline Editor 4.9.5: Track Manager và Transition Studio."""
+    """Timeline Editor 4.9.5.2: transition tương tác trực tiếp trên canvas."""
 
     back_requested = Signal()
 
@@ -57,6 +57,9 @@ class TimelineEditorPage(QWidget):
         self.canvas.split_requested.connect(self._split_clip_by_id)
         self.canvas.delete_requested.connect(self._delete_clip_by_id)
         self.canvas.seek_requested.connect(self.preview.set_playhead)
+        self.canvas.transition_selected.connect(self.transition_studio.select_transition)
+        self.canvas.transition_changed.connect(self._canvas_transition_changed)
+        self.canvas.transition_delete_requested.connect(self._delete_transition_by_id)
         self._refresh_all()
 
     def _build_ui(self) -> None:
@@ -653,6 +656,20 @@ class TimelineEditorPage(QWidget):
         self.canvas.refresh()
         self._refresh_summary()
 
+
+
+    def _canvas_transition_changed(self, transition_id: str, duration: float) -> None:
+        if self.transition_studio.service.update(transition_id, duration=duration):
+            self.transition_studio.select_transition(transition_id)
+            self.transition_studio.refresh()
+            self.canvas.refresh()
+            self._show_preview_status("Đã cập nhật thời lượng transition")
+
+    def _delete_transition_by_id(self, transition_id: str) -> None:
+        if self.transition_studio.service.remove(transition_id):
+            self.transition_studio.refresh()
+            self.canvas.refresh()
+            self._show_preview_status("Đã xóa transition")
 
     def _select_clip_from_canvas(self, clip_id: str) -> None:
         self._selected_clip_id = clip_id
