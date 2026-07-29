@@ -31,6 +31,7 @@ from app.timeline_preview_widget import TimelinePreviewWidget
 from app.timeline_canvas import TimelineCanvas
 from app.timeline_track_manager import TrackManagerWidget
 from app.widgets.transition_studio_widget import TransitionStudioWidget
+from app.widgets.audio_mixer_widget import AudioMixerWidget
 
 
 class TimelineEditorPage(QWidget):
@@ -155,6 +156,10 @@ class TimelineEditorPage(QWidget):
         self.track_manager = TrackManagerWidget(self.service, self)
         self.track_manager.track_changed.connect(self._track_changed)
         root.addWidget(self.track_manager)
+
+        self.audio_mixer = AudioMixerWidget(self.service, self)
+        self.audio_mixer.audio_changed.connect(self._audio_changed)
+        root.addWidget(self.audio_mixer)
 
         self.transition_studio = TransitionStudioWidget(self.service, self)
         self.transition_studio.transition_changed.connect(self._transition_changed)
@@ -549,6 +554,7 @@ class TimelineEditorPage(QWidget):
         self.track_manager.refresh()
         self.canvas.refresh()
         self.transition_studio.refresh()
+        self.audio_mixer.refresh()
         self._refresh_table(select_clip_id)
         self._refresh_summary()
         if select_clip_id:
@@ -651,6 +657,12 @@ class TimelineEditorPage(QWidget):
         self._refresh_table(self._selected_clip_id)
         self._refresh_summary()
         self._show_preview_status("Đã cập nhật Track")
+
+    def _audio_changed(self) -> None:
+        self.track_manager.refresh()
+        self.canvas.refresh()
+        self._refresh_table(self._selected_clip_id)
+        self._show_preview_status("Đã cập nhật Audio Mixer")
 
     def _transition_changed(self) -> None:
         self.canvas.refresh()

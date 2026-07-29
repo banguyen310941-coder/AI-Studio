@@ -10,7 +10,7 @@ from typing import Any
 
 DEFAULT_TRACKS = [
     {"id": "video-1", "name": "Video 1", "type": "video", "color": "#4355ff", "locked": False, "muted": False, "visible": True, "clips": []},
-    {"id": "audio-1", "name": "Audio 1", "type": "audio", "color": "#20a36a", "locked": False, "muted": False, "visible": True, "clips": []},
+    {"id": "audio-1", "name": "Audio 1", "type": "audio", "color": "#20a36a", "locked": False, "muted": False, "solo": False, "volume": 1.0, "pan": 0.0, "visible": True, "clips": []},
     {"id": "subtitle-1", "name": "Phụ đề", "type": "subtitle", "color": "#d88722", "locked": False, "muted": False, "visible": True, "clips": []},
 ]
 
@@ -125,6 +125,9 @@ class TimelineService:
             "color": colors[track_type],
             "locked": False,
             "muted": False,
+            "solo": False,
+            "volume": 1.0,
+            "pan": 0.0,
             "visible": True,
             "clips": [],
         }
@@ -163,6 +166,8 @@ class TimelineService:
             "duration": max(0.1, float(duration)),
             "text": text,
             "volume": max(0.0, min(2.0, float(volume))),
+            "fade_in": 0.0,
+            "fade_out": 0.0,
             "enabled": True,
         }
         track["clips"].append(clip)
@@ -334,7 +339,13 @@ class TimelineService:
             track.setdefault("color", colors.get(track_type, "#667085"))
             track.setdefault("locked", False)
             track.setdefault("muted", False)
+            track.setdefault("solo", False)
+            track.setdefault("volume", 1.0)
+            track.setdefault("pan", 0.0)
             track.setdefault("visible", True)
+            for clip in track.get("clips", []):
+                clip.setdefault("fade_in", 0.0)
+                clip.setdefault("fade_out", 0.0)
         raw.setdefault("transitions", [])
         raw["schema_version"] = max(2, int(raw.get("schema_version", 1)))
         self._data = raw
