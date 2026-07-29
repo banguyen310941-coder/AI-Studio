@@ -37,8 +37,19 @@ class RenderPlan:
             "audio_output_label": self.audio_output_label,
         }
 
-    def ffmpeg_command(self, output_path: str = "output/transition_render.mp4") -> str:
-        args: list[str] = ["ffmpeg", "-y"]
+    @property
+    def estimated_duration(self) -> float:
+        total = sum(max(0.0, clip.duration) for clip in self.clips)
+        overlap = sum(max(0.0, float(item.get("duration", 0.0))) for item in self.transitions)
+        return max(0.001, total - overlap)
+
+    def ffmpeg_args(
+        self,
+        output_path: str | Path = "output/transition_render.mp4",
+        *,
+        ffmpeg_path: str = "ffmpeg",
+    ) -> list[str]:
+        args: list[str] = [ffmpeg_path, "-y"]
         for clip in self.clips:
             args.extend(["-i", clip.source])
         combined = self.filter_complex
@@ -47,12 +58,19 @@ class RenderPlan:
         args.extend(["-filter_complex", combined, "-map", self.output_label])
         if self.audio_output_label:
             args.extend(["-map", self.audio_output_label])
+        else:
+            args.append("-an")
         args.extend([
             "-c:v", "libx264", "-preset", "medium", "-crf", "18",
-            "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart",
-            output_path,
+            "-pix_fmt", "yuv420p",
         ])
-        return " ".join(shlex.quote(str(item)) for item in args)
+        if self.audio_output_label:
+            args.extend(["-c:a", "aac", "-b:a", "192k"])
+        args.extend(["-movflags", "+faststart", str(output_path)])
+        return args
+
+    def ffmpeg_command(self, output_path: str = "output/transition_render.mp4") -> str:
+        return " ".join(shlex.quote(str(item)) for item in self.ffmpeg_args(output_path))
 
     def save(self, path: str | Path) -> Path:
         target = Path(path)

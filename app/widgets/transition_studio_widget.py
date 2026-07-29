@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+import threading
 from typing import Any
 
 from PySide6.QtCore import Qt, Signal
@@ -11,6 +13,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QFrame,
     QHBoxLayout,
+    QProgressBar,
     QLabel,
     QMessageBox,
     QFileDialog,
@@ -21,6 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.transitions.render_executor import RenderResult, TransitionRenderExecutor
 from app.transitions.transition_service import TransitionService
 
 
@@ -29,6 +33,9 @@ class TransitionStudioWidget(QFrame):
 
     transition_changed = Signal()
     seek_requested = Signal(float)
+    render_progress = Signal(float, str)
+    render_finished = Signal(object)
+    render_log = Signal(str)
 
     def __init__(self, timeline_service, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -36,6 +43,11 @@ class TransitionStudioWidget(QFrame):
         self.service = TransitionService(timeline_service)
         self._selected_id: str | None = None
         self._loading = False
+        self._render_executor: TransitionRenderExecutor | None = None
+        self._render_thread: threading.Thread | None = None
+        self.render_progress.connect(self._on_render_progress)
+        self.render_finished.connect(self._on_render_finished)
+        self.render_log.connect(self._on_render_log)
         self._build_ui()
         self.refresh()
 
@@ -45,7 +57,7 @@ class TransitionStudioWidget(QFrame):
         root.setSpacing(10)
 
         title_row = QHBoxLayout()
-        title = QLabel("Transition Studio 4.9.5.4", self)
+        title = QLabel("Transition Studio 4.9.5.5", self)
         title.setObjectName("sectionTitle")
         self.summary_label = QLabel(self)
         self.summary_label.setObjectName("description")
@@ -103,6 +115,12 @@ class TransitionStudioWidget(QFrame):
         disable_all_button.clicked.connect(lambda: self._set_all_enabled(False))
         render_plan_button = QPushButton("Xuất Render Plan", self)
         render_plan_button.clicked.connect(self._export_render_plan)
+        self.render_button = QPushButton("Render Video", self)
+        self.render_button.setObjectName("primaryButton")
+        self.render_button.clicked.connect(self._render_video)
+        self.cancel_render_button = QPushButton("Hủy Render", self)
+        self.cancel_render_button.setEnabled(False)
+        self.cancel_render_button.clicked.connect(self._cancel_render)
         button_box.addWidget(add_button)
         button_box.addWidget(apply_button)
         button_box.addWidget(delete_button)
@@ -112,6 +130,8 @@ class TransitionStudioWidget(QFrame):
         button_box.addWidget(enable_all_button)
         button_box.addWidget(disable_all_button)
         button_box.addWidget(render_plan_button)
+        button_box.addWidget(self.render_button)
+        button_box.addWidget(self.cancel_render_button)
         button_box.addStretch()
         form_row.addLayout(button_box)
         root.addLayout(form_row)
@@ -137,6 +157,17 @@ class TransitionStudioWidget(QFrame):
         self.validation_label.setObjectName("description")
         self.validation_label.setWordWrap(True)
         root.addWidget(self.validation_label)
+
+        self.render_progress_bar = QProgressBar(self)
+        self.render_progress_bar.setRange(0, 1000)
+        self.render_progress_bar.setValue(0)
+        self.render_progress_bar.setFormat("Sẵn sàng render")
+        root.addWidget(self.render_progress_bar)
+
+        self.render_status_label = QLabel("FFmpeg Executor: sẵn sàng", self)
+        self.render_status_label.setObjectName("description")
+        self.render_status_label.setWordWrap(True)
+        root.addWidget(self.render_status_label)
 
     def refresh(self) -> None:
         self.service.ensure_document()
@@ -313,6 +344,111 @@ class TransitionStudioWidget(QFrame):
         transition = self.service.get(self._selected_id or "")
         if transition is not None:
             self.seek_requested.emit(self.service.transition_time(transition))
+
+
+    def _export_render_plan(self) -> None:
+        try:
+            plan = self.service.build_render_plan()
+        except (ValueError, KeyError) as exc:
+            QMessageBox.warning(self, "Transition Studio", str(exc))
+            return
+        default_path = str(Path.cwd() / "output" / "transition-render-plan.json")
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            "Xuất Transition Render Plan",
+            default_path,
+            "JSON (*.json)",
+        )
+        if not filename:
+            return
+        target = plan.save(filename)
+        self.render_status_label.setText(f"Đã lưu Render Plan: {target}")
+        QMessageBox.information(self, "Transition Studio", f"Đã xuất Render Plan:\n{target}")
+
+    def _render_video(self) -> None:
+        if self._render_thread is not None and self._render_thread.is_alive():
+            QMessageBox.information(self, "Transition Studio", "Một tác vụ render đang chạy.")
+            return
+        try:
+            plan = self.service.build_render_plan()
+        except (ValueError, KeyError) as exc:
+            QMessageBox.warning(self, "Transition Studio", str(exc))
+            return
+
+        default_path = str(Path.cwd() / "output" / "transition-render.mp4")
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            "Render Transition Video",
+            default_path,
+            "MP4 Video (*.mp4)",
+        )
+        if not filename:
+            return
+        if not filename.lower().endswith(".mp4"):
+            filename += ".mp4"
+
+        executor = TransitionRenderExecutor()
+        if not executor.available():
+            QMessageBox.warning(
+                self,
+                "Transition Studio",
+                "Không tìm thấy FFmpeg. Hãy cài FFmpeg và đảm bảo lệnh ffmpeg có trong PATH.",
+            )
+            return
+
+        self._render_executor = executor
+        self.render_button.setEnabled(False)
+        self.cancel_render_button.setEnabled(True)
+        self.render_progress_bar.setValue(0)
+        self.render_progress_bar.setFormat("Đang chuẩn bị render…")
+        self.render_status_label.setText(f"Đầu ra: {filename}")
+
+        def task() -> None:
+            try:
+                result = executor.render(
+                    plan,
+                    filename,
+                    progress_callback=lambda value, message: self.render_progress.emit(value, message),
+                    log_callback=self.render_log.emit,
+                )
+            except Exception as exc:  # lỗi hệ thống/FFmpeg được báo về UI
+                result = RenderResult(False, Path(filename), -1, message=str(exc))
+            self.render_finished.emit(result)
+
+        self._render_thread = threading.Thread(target=task, name="transition-render", daemon=True)
+        self._render_thread.start()
+
+    def _cancel_render(self) -> None:
+        if self._render_executor is not None and self._render_executor.cancel():
+            self.render_status_label.setText("Đang hủy render…")
+            self.cancel_render_button.setEnabled(False)
+
+    def _on_render_progress(self, value: float, message: str) -> None:
+        self.render_progress_bar.setValue(int(max(0.0, min(100.0, value)) * 10))
+        self.render_progress_bar.setFormat(message)
+        self.render_status_label.setText(message)
+
+    def _on_render_log(self, line: str) -> None:
+        if "error" in line.lower() or "invalid" in line.lower():
+            self.render_status_label.setText(line[-220:])
+
+    def _on_render_finished(self, result: RenderResult) -> None:
+        self.render_button.setEnabled(True)
+        self.cancel_render_button.setEnabled(False)
+        self._render_executor = None
+        self._render_thread = None
+        if result.success:
+            self.render_progress_bar.setValue(1000)
+            self.render_progress_bar.setFormat("Render hoàn tất")
+            self.render_status_label.setText(f"Đã render: {result.output_path}")
+            QMessageBox.information(self, "Transition Studio", f"Render hoàn tất:\n{result.output_path}")
+        elif result.cancelled:
+            self.render_progress_bar.setFormat("Đã hủy render")
+            self.render_status_label.setText(result.message)
+        else:
+            self.render_progress_bar.setFormat("Render thất bại")
+            self.render_status_label.setText(result.message)
+            QMessageBox.warning(self, "Transition Studio", result.message or "Render thất bại.")
 
     def _clip_name(self, clip_id: str) -> str:
         result = self.service.timeline_service.find_clip(clip_id)
