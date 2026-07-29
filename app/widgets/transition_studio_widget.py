@@ -27,6 +27,9 @@ from PySide6.QtWidgets import (
 
 from app.transitions.render_executor import RenderResult, TransitionRenderExecutor
 from app.transitions.transition_service import TransitionService
+from app.render.render_job import RenderJob
+from app.render.render_queue import RenderQueueManager
+from app.widgets.render_queue_widget import RenderQueueDialog
 
 
 class TransitionStudioWidget(QFrame):
@@ -46,6 +49,8 @@ class TransitionStudioWidget(QFrame):
         self._loading = False
         self._render_executor: TransitionRenderExecutor | None = None
         self._render_thread: threading.Thread | None = None
+        self._queue_manager = RenderQueueManager()
+        self._queue_dialog: RenderQueueDialog | None = None
         self.render_progress.connect(self._on_render_progress)
         self.render_finished.connect(self._on_render_finished)
         self.render_log.connect(self._on_render_log)
@@ -58,7 +63,7 @@ class TransitionStudioWidget(QFrame):
         root.setSpacing(10)
 
         title_row = QHBoxLayout()
-        title = QLabel("Transition Studio 4.9.5.6", self)
+        title = QLabel("Transition Studio 4.9.5.7", self)
         title.setObjectName("sectionTitle")
         self.summary_label = QLabel(self)
         self.summary_label.setObjectName("description")
@@ -125,6 +130,10 @@ class TransitionStudioWidget(QFrame):
         self.cancel_render_button = QPushButton("Hủy Render", self)
         self.cancel_render_button.setEnabled(False)
         self.cancel_render_button.clicked.connect(self._cancel_render)
+        queue_add_button = QPushButton("＋ Thêm vào Render Queue", self)
+        queue_add_button.clicked.connect(self._add_to_render_queue)
+        queue_open_button = QPushButton("Mở Render Queue", self)
+        queue_open_button.clicked.connect(self._open_render_queue)
         save_preset_button = QPushButton("Lưu preset cá nhân", self)
         save_preset_button.clicked.connect(self._save_user_preset)
         apply_preset_button = QPushButton("Áp dụng preset đã chọn", self)
@@ -148,6 +157,8 @@ class TransitionStudioWidget(QFrame):
         button_box.addWidget(render_plan_button)
         button_box.addWidget(self.render_button)
         button_box.addWidget(self.cancel_render_button)
+        button_box.addWidget(queue_add_button)
+        button_box.addWidget(queue_open_button)
         button_box.addWidget(save_preset_button)
         button_box.addWidget(apply_preset_button)
         button_box.addWidget(favorite_preset_button)
@@ -480,6 +491,32 @@ class TransitionStudioWidget(QFrame):
         target = plan.save(filename)
         self.render_status_label.setText(f"Đã lưu Render Plan: {target}")
         QMessageBox.information(self, "Transition Studio", f"Đã xuất Render Plan:\n{target}")
+
+
+    def _add_to_render_queue(self) -> None:
+        try:
+            plan = self.service.build_render_plan()
+        except (ValueError, KeyError) as exc:
+            QMessageBox.warning(self, "Render Queue", str(exc))
+            return
+        default_path = str(Path.cwd() / "output" / f"transition-queue-{len(self._queue_manager.jobs) + 1}.mp4")
+        filename, _ = QFileDialog.getSaveFileName(self, "Thêm job vào Render Queue", default_path, "MP4 Video (*.mp4)")
+        if not filename:
+            return
+        if not filename.lower().endswith(".mp4"):
+            filename += ".mp4"
+        job = RenderJob.from_plan(plan, filename)
+        self._queue_manager.add(job)
+        self.render_status_label.setText(f"Đã thêm vào Render Queue: {job.name}")
+        self._open_render_queue()
+
+    def _open_render_queue(self) -> None:
+        if self._queue_dialog is None:
+            self._queue_dialog = RenderQueueDialog(self._queue_manager, self)
+        self._queue_dialog.refresh()
+        self._queue_dialog.show()
+        self._queue_dialog.raise_()
+        self._queue_dialog.activateWindow()
 
     def _render_video(self) -> None:
         if self._render_thread is not None and self._render_thread.is_alive():
