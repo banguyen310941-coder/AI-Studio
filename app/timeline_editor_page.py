@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -160,26 +161,36 @@ class TimelineEditorPage(QWidget):
         self.track_manager.track_changed.connect(self._track_changed)
         root.addWidget(self.track_manager)
 
-        self.audio_mixer = AudioMixerWidget(self.service, self)
+        # 4.9.6.4: gom các công cụ clip vào một dock dạng tab.
+        # Cách này giữ Timeline luôn nhìn thấy được trên màn hình MacBook nhỏ
+        # và giúp Keyframe Animation không bị đẩy ra ngoài cửa sổ.
+        self.tool_tabs = QTabWidget(self)
+        self.tool_tabs.setObjectName("timelineToolDock")
+        self.tool_tabs.setMinimumHeight(245)
+        self.tool_tabs.setDocumentMode(True)
+
+        self.audio_mixer = AudioMixerWidget(self.service, self.tool_tabs)
         self.audio_mixer.audio_changed.connect(self._audio_changed)
-        root.addWidget(self.audio_mixer)
+        self.tool_tabs.addTab(self.audio_mixer, "Âm thanh")
 
-        self.color_correction = ColorCorrectionWidget(self.service, self)
+        self.color_correction = ColorCorrectionWidget(self.service, self.tool_tabs)
         self.color_correction.color_changed.connect(self._color_changed)
-        root.addWidget(self.color_correction)
+        self.tool_tabs.addTab(self.color_correction, "Màu sắc")
 
-        self.lut_manager = LUTManagerWidget(self.service, self)
+        self.lut_manager = LUTManagerWidget(self.service, self.tool_tabs)
         self.lut_manager.lut_changed.connect(self._lut_changed)
-        root.addWidget(self.lut_manager)
+        self.tool_tabs.addTab(self.lut_manager, "LUT")
 
-        self.keyframe_animation = KeyframeAnimationWidget(self.service, self)
+        self.keyframe_animation = KeyframeAnimationWidget(self.service, self.tool_tabs)
         self.keyframe_animation.animation_changed.connect(self._animation_changed)
-        root.addWidget(self.keyframe_animation)
+        self.tool_tabs.addTab(self.keyframe_animation, "◆ Keyframe")
 
-        self.transition_studio = TransitionStudioWidget(self.service, self)
+        self.transition_studio = TransitionStudioWidget(self.service, self.tool_tabs)
         self.transition_studio.transition_changed.connect(self._transition_changed)
         self.transition_studio.seek_requested.connect(self.preview.set_playhead)
-        root.addWidget(self.transition_studio)
+        self.tool_tabs.addTab(self.transition_studio, "Transition")
+
+        root.addWidget(self.tool_tabs)
 
         self.canvas = TimelineCanvas(self.service, self)
         root.addWidget(self.canvas)
@@ -651,6 +662,7 @@ class TimelineEditorPage(QWidget):
 
     def _playhead_changed(self, seconds: float) -> None:
         self.statusBarMessage = f"Playhead: {seconds:.3f}s"
+        self.keyframe_animation.set_playhead(seconds)
 
     def _jump_to_selected_clip(self) -> None:
         if not self._selected_clip_id:
