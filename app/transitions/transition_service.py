@@ -7,6 +7,7 @@ from app.transitions.transition_model import TransitionModel
 from app.transitions.transition_registry import TransitionRegistry
 from app.transitions.xfade import XFadeCompiler
 from app.transitions.render_plan import TransitionRenderPlanner
+from app.transitions.preset_store import TransitionPresetStore, UserTransitionPreset
 
 
 @dataclass(slots=True)
@@ -24,6 +25,7 @@ class TransitionService:
         self.timeline_service = timeline_service
         self.registry = TransitionRegistry()
         self.compiler = XFadeCompiler(self.registry)
+        self.preset_store = TransitionPresetStore()
         self.ensure_document()
 
     @property
@@ -303,6 +305,66 @@ class TransitionService:
             count=len(enabled),
             total_duration=round(sum(float(item.get("duration", 0.0)) for item in enabled), 3),
         )
+
+    def save_user_preset(
+        self,
+        name: str,
+        transition_type: str,
+        duration: float,
+        easing: str,
+        *,
+        favorite: bool = False,
+    ) -> UserTransitionPreset:
+        import re
+        from uuid import uuid4
+
+        self.registry.require(transition_type)
+        if easing not in self.EASINGS:
+            raise ValueError("Easing không hợp lệ.")
+        clean_name = name.strip()
+        if not clean_name:
+            raise ValueError("Tên preset không được để trống.")
+        slug = re.sub(r"[^a-z0-9]+", "_", clean_name.casefold()).strip("_")
+        preset = UserTransitionPreset(
+            id=f"user_{slug or uuid4().hex[:8]}",
+            name=clean_name,
+            transition_type=transition_type,
+            duration=round(max(0.1, min(10.0, float(duration))), 3),
+            easing=easing,
+            favorite=favorite,
+        )
+        suffix = 2
+        base_id = preset.id
+        while self.preset_store.get(preset.id) is not None:
+            preset.id = f"{base_id}_{suffix}"
+            suffix += 1
+        self.preset_store.upsert(preset)
+        return preset
+
+    def apply_user_preset(self, preset_id: str, transition_ids: list[str]) -> int:
+        preset = self.preset_store.get(preset_id)
+        if preset is None:
+            raise KeyError("Không tìm thấy preset người dùng.")
+        valid_ids = [item for item in transition_ids if self.get(item) is not None]
+        if not valid_ids:
+            return 0
+        self.timeline_service.checkpoint()
+        count = 0
+        for transition_id in valid_ids:
+            transition = self.get(transition_id)
+            if transition is None:
+                continue
+            from_result = self.timeline_service.find_clip(str(transition.get("from_clip_id", "")))
+            to_result = self.timeline_service.find_clip(str(transition.get("to_clip_id", "")))
+            if from_result is None or to_result is None:
+                continue
+            _, from_clip = from_result
+            _, to_clip = to_result
+            transition["type"] = preset.transition_type
+            transition["duration"] = self._bounded_duration(from_clip, to_clip, preset.duration)
+            transition["easing"] = preset.easing
+            count += 1
+        return count
 
     def preset_name(self, preset_id: str) -> str:
         preset = self.registry.get(preset_id)

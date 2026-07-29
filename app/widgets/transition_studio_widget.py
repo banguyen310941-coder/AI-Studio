@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QFrame,
     QHBoxLayout,
+    QInputDialog,
     QProgressBar,
     QLabel,
     QMessageBox,
@@ -57,7 +58,7 @@ class TransitionStudioWidget(QFrame):
         root.setSpacing(10)
 
         title_row = QHBoxLayout()
-        title = QLabel("Transition Studio 4.9.5.5", self)
+        title = QLabel("Transition Studio 4.9.5.6", self)
         title.setObjectName("sectionTitle")
         self.summary_label = QLabel(self)
         self.summary_label.setObjectName("description")
@@ -93,6 +94,9 @@ class TransitionStudioWidget(QFrame):
         form.addRow("Thời lượng", self.duration_spin)
         form.addRow("Easing", self.easing_combo)
         form.addRow("", self.enabled_check)
+
+        self.user_preset_combo = QComboBox(self)
+        form.addRow("Preset cá nhân", self.user_preset_combo)
         form_row.addLayout(form, 1)
 
         button_box = QVBoxLayout()
@@ -121,6 +125,18 @@ class TransitionStudioWidget(QFrame):
         self.cancel_render_button = QPushButton("Hủy Render", self)
         self.cancel_render_button.setEnabled(False)
         self.cancel_render_button.clicked.connect(self._cancel_render)
+        save_preset_button = QPushButton("Lưu preset cá nhân", self)
+        save_preset_button.clicked.connect(self._save_user_preset)
+        apply_preset_button = QPushButton("Áp dụng preset đã chọn", self)
+        apply_preset_button.clicked.connect(self._apply_user_preset)
+        favorite_preset_button = QPushButton("Đánh dấu yêu thích", self)
+        favorite_preset_button.clicked.connect(self._toggle_user_preset_favorite)
+        delete_preset_button = QPushButton("Xóa preset cá nhân", self)
+        delete_preset_button.clicked.connect(self._delete_user_preset)
+        import_preset_button = QPushButton("Nhập preset JSON", self)
+        import_preset_button.clicked.connect(self._import_user_presets)
+        export_preset_button = QPushButton("Xuất preset JSON", self)
+        export_preset_button.clicked.connect(self._export_user_presets)
         button_box.addWidget(add_button)
         button_box.addWidget(apply_button)
         button_box.addWidget(delete_button)
@@ -132,6 +148,12 @@ class TransitionStudioWidget(QFrame):
         button_box.addWidget(render_plan_button)
         button_box.addWidget(self.render_button)
         button_box.addWidget(self.cancel_render_button)
+        button_box.addWidget(save_preset_button)
+        button_box.addWidget(apply_preset_button)
+        button_box.addWidget(favorite_preset_button)
+        button_box.addWidget(delete_preset_button)
+        button_box.addWidget(import_preset_button)
+        button_box.addWidget(export_preset_button)
         button_box.addStretch()
         form_row.addLayout(button_box)
         root.addLayout(form_row)
@@ -142,7 +164,7 @@ class TransitionStudioWidget(QFrame):
         )
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.itemSelectionChanged.connect(self._selection_changed)
         self.table.setMaximumHeight(170)
@@ -176,6 +198,7 @@ class TransitionStudioWidget(QFrame):
         self._loading = True
         try:
             self._refresh_clip_combos()
+            self._refresh_user_presets()
             self.table.setRowCount(0)
             for transition in self.service.data:
                 row = self.table.rowCount()
@@ -238,6 +261,99 @@ class TransitionStudioWidget(QFrame):
                 combo.setCurrentIndex(index)
         if self.to_combo.count() > 1 and self.to_combo.currentIndex() == self.from_combo.currentIndex():
             self.to_combo.setCurrentIndex(1)
+
+    def _refresh_user_presets(self) -> None:
+        current = self.user_preset_combo.currentData()
+        self.user_preset_combo.clear()
+        for preset in self.service.preset_store.all():
+            star = "★ " if preset.favorite else ""
+            self.user_preset_combo.addItem(f"{star}{preset.name}", preset.id)
+        index = self.user_preset_combo.findData(current)
+        if index >= 0:
+            self.user_preset_combo.setCurrentIndex(index)
+
+    def _selected_transition_ids(self) -> list[str]:
+        ids: list[str] = []
+        for item in self.table.selectedItems():
+            transition_id = str(item.data(Qt.ItemDataRole.UserRole) or "")
+            if transition_id and transition_id not in ids:
+                ids.append(transition_id)
+        if not ids and self._selected_id:
+            ids.append(self._selected_id)
+        return ids
+
+    def _save_user_preset(self) -> None:
+        name, accepted = QInputDialog.getText(self, "Lưu preset", "Tên preset:")
+        if not accepted:
+            return
+        try:
+            preset = self.service.save_user_preset(
+                name,
+                str(self.type_combo.currentData() or "cross_dissolve"),
+                self.duration_spin.value(),
+                str(self.easing_combo.currentData() or "ease-in-out"),
+            )
+            self._refresh_user_presets()
+            self._set_combo_data(self.user_preset_combo, preset.id)
+        except ValueError as exc:
+            QMessageBox.warning(self, "Transition Studio", str(exc))
+
+    def _apply_user_preset(self) -> None:
+        preset_id = str(self.user_preset_combo.currentData() or "")
+        ids = self._selected_transition_ids()
+        if not preset_id:
+            QMessageBox.information(self, "Transition Studio", "Chưa có preset cá nhân để áp dụng.")
+            return
+        if not ids:
+            QMessageBox.information(self, "Transition Studio", "Hãy chọn một hoặc nhiều transition.")
+            return
+        try:
+            count = self.service.apply_user_preset(preset_id, ids)
+            self.refresh()
+            self.transition_changed.emit()
+            QMessageBox.information(self, "Transition Studio", f"Đã áp dụng preset cho {count} transition.")
+        except (ValueError, KeyError) as exc:
+            QMessageBox.warning(self, "Transition Studio", str(exc))
+
+    def _toggle_user_preset_favorite(self) -> None:
+        preset_id = str(self.user_preset_combo.currentData() or "")
+        preset = self.service.preset_store.get(preset_id)
+        if preset is None:
+            return
+        self.service.preset_store.set_favorite(preset_id, not preset.favorite)
+        self._refresh_user_presets()
+        self._set_combo_data(self.user_preset_combo, preset_id)
+
+    def _delete_user_preset(self) -> None:
+        preset_id = str(self.user_preset_combo.currentData() or "")
+        if not preset_id:
+            return
+        self.service.preset_store.remove(preset_id)
+        self._refresh_user_presets()
+
+    def _import_user_presets(self) -> None:
+        filename, _ = QFileDialog.getOpenFileName(self, "Nhập preset transition", str(Path.cwd()), "JSON (*.json)")
+        if not filename:
+            return
+        try:
+            count = self.service.preset_store.import_file(filename)
+            self._refresh_user_presets()
+            QMessageBox.information(self, "Transition Studio", f"Đã nhập {count} preset.")
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, "Transition Studio", str(exc))
+
+    def _export_user_presets(self) -> None:
+        default_path = str(Path.cwd() / "data" / "transition-presets-export.json")
+        filename, _ = QFileDialog.getSaveFileName(self, "Xuất preset transition", default_path, "JSON (*.json)")
+        if not filename:
+            return
+        if not filename.lower().endswith(".json"):
+            filename += ".json"
+        try:
+            target = self.service.preset_store.export_file(filename)
+            QMessageBox.information(self, "Transition Studio", f"Đã xuất preset:\n{target}")
+        except OSError as exc:
+            QMessageBox.warning(self, "Transition Studio", str(exc))
 
     def _add_transition(self) -> None:
         try:
