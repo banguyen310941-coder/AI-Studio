@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QApplication
 
 from app.agents.script_agent import ScriptAgent
 from app.models.project_model import ProjectModel
@@ -75,8 +74,6 @@ class ScriptController(QObject):
 
         self._running = True
         self.generation_started.emit()
-
-        QApplication.processEvents()
 
         try:
             scenes = self.script_agent.generate(
