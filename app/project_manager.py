@@ -107,6 +107,7 @@ class ProjectManager:
 
         metadata = {
             "name": project_name,
+            "topic": "",
             "created_at": datetime.now().isoformat(timespec="seconds"),
             "version": 1,
         }
@@ -122,6 +123,53 @@ class ProjectManager:
             return False
         shutil.rmtree(project_path)
         return True
+
+    def save_topic(self, project_name: str, topic: str) -> bool:
+        project_path = self.projects_directory / project_name
+        if not project_path.exists():
+            return False
+
+        metadata_path = project_path / "project.json"
+        metadata: dict = {}
+
+        if metadata_path.exists():
+            try:
+                loaded = json.loads(metadata_path.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    metadata = loaded
+            except (json.JSONDecodeError, OSError):
+                metadata = {}
+
+        metadata.setdefault("name", project_name)
+        metadata.setdefault("version", 1)
+        metadata["topic"] = topic.strip()
+        metadata["updated_at"] = datetime.now().isoformat(timespec="seconds")
+
+        try:
+            metadata_path.write_text(
+                json.dumps(metadata, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        except OSError:
+            return False
+
+        return True
+
+    def load_topic(self, project_name: str) -> str:
+        metadata_path = self.projects_directory / project_name / "project.json"
+        if not metadata_path.exists():
+            return ""
+
+        try:
+            data = json.loads(metadata_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return ""
+
+        if not isinstance(data, dict):
+            return ""
+
+        topic = data.get("topic", "")
+        return "" if topic is None else str(topic).strip()
 
     def save_script(self, project_name: str, script_content: str) -> bool:
         project_path = self.projects_directory / project_name
