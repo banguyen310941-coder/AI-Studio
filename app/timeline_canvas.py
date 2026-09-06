@@ -109,7 +109,7 @@ class TimelineClipItem(QGraphicsObject):
         )
 
     def hoverMoveEvent(self, event) -> None:
-        if event.position().x() >= self.boundingRect().right() - self.HANDLE_WIDTH:
+        if event.pos().x() >= self.boundingRect().right() - self.HANDLE_WIDTH:
             self.setCursor(Qt.CursorShape.SizeHorCursor)
         else:
             self.setCursor(Qt.CursorShape.OpenHandCursor)
@@ -121,7 +121,7 @@ class TimelineClipItem(QGraphicsObject):
         self._original_start = float(self.clip.get("start", 0.0))
         self._original_duration = float(self.clip.get("duration", 1.0))
         self._resizing = (
-            event.position().x()
+            event.pos().x()
             >= self.boundingRect().right() - self.HANDLE_WIDTH
         )
         self.setCursor(
@@ -157,13 +157,17 @@ class TimelineClipItem(QGraphicsObject):
 
     def mouseReleaseEvent(self, event) -> None:
         self.setCursor(Qt.CursorShape.OpenHandCursor)
-        self.changed.emit(
-            self.clip_id,
-            float(self.clip.get("start", 0.0)),
-            float(self.clip.get("duration", 1.0)),
-        )
         self._resizing = False
+
+        clip_id = self.clip_id
+        start = float(self.clip.get("start", 0.0))
+        duration = float(self.clip.get("duration", 1.0))
+
         super().mouseReleaseEvent(event)
+
+        # Signal này có thể làm TimelineEditorPage refresh/clear scene.
+        # Không truy cập self sau khi emit để tránh dùng wrapper Qt đã bị xóa.
+        self.changed.emit(clip_id, start, duration)
 
     def contextMenuEvent(self, event) -> None:
         menu = QMenu()
@@ -367,11 +371,23 @@ class TimelineCanvas(QGraphicsView):
                 * self.geometry_config.pixels_per_second,
                 y + 6.0,
             )
-            item.changed.connect(self.clip_changed.emit)
+            item.changed.connect(
+                self.clip_changed.emit,
+                type=Qt.ConnectionType.QueuedConnection,
+            )
             item.selected_clip.connect(self.clip_selected.emit)
-            item.duplicate_requested.connect(self.duplicate_requested.emit)
-            item.split_requested.connect(self.split_requested.emit)
-            item.delete_requested.connect(self.delete_requested.emit)
+            item.duplicate_requested.connect(
+                self.duplicate_requested.emit,
+                type=Qt.ConnectionType.QueuedConnection,
+            )
+            item.split_requested.connect(
+                self.split_requested.emit,
+                type=Qt.ConnectionType.QueuedConnection,
+            )
+            item.delete_requested.connect(
+                self.delete_requested.emit,
+                type=Qt.ConnectionType.QueuedConnection,
+            )
             self.scene_object.addItem(item)
 
     def _draw_playhead(self) -> None:
