@@ -172,6 +172,9 @@ class ProjectController(QObject):
             scenes = self.project_manager.load_scenes(
                 self.current_project_name
             )
+            topic = self.project_manager.load_topic(
+                self.current_project_name
+            )
 
             if scenes is None:
                 scenes = []
@@ -187,7 +190,7 @@ class ProjectController(QObject):
             model.initialize(
                 project_name=self.current_project_name,
                 scenes=scenes,
-                topic="",
+                topic=topic,
                 mark_clean=True,
             )
 
@@ -260,6 +263,7 @@ class ProjectController(QObject):
 
             model = self._require_project_model()
             scenes = model.get_scenes()
+            topic = model.get_topic()
 
             if not scenes:
                 raise ValueError(
@@ -267,7 +271,8 @@ class ProjectController(QObject):
                 )
 
             saved = self._save_scenes(
-                scenes
+                scenes,
+                topic=topic,
             )
 
             if not saved:
@@ -312,6 +317,7 @@ class ProjectController(QObject):
     def _save_scenes(
         self,
         scenes: list[dict],
+        topic: str | None = None,
     ) -> bool:
         scenes_saved = (
             self.project_manager.save_scenes(
@@ -327,12 +333,22 @@ class ProjectController(QObject):
             scenes
         )
 
-        return bool(
-            self.project_manager.save_script(
-                self.current_project_name,
-                script_text,
-            )
+        script_saved = self.project_manager.save_script(
+            self.current_project_name,
+            script_text,
         )
+        if not script_saved:
+            return False
+
+        if topic is not None:
+            topic_saved = self.project_manager.save_topic(
+                self.current_project_name,
+                topic,
+            )
+            if not topic_saved:
+                return False
+
+        return True
 
     # =========================================================
     # SAVED STATE
