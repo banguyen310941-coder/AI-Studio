@@ -65,10 +65,6 @@ class TimelineCanvasSmokeTests(unittest.TestCase):
             center_scene = item.mapToScene(item.boundingRect().center())
             center = self.canvas.mapFromScene(center_scene)
 
-            handle_scene = item.mapToScene(
-                item.boundingRect().topRight()
-                - self.canvas.transform().inverted()[0].map(QPoint(4, -10))
-            )
             # Hover over the clip first: this exercises QGraphicsSceneHoverEvent.pos().
             QTest.mouseMove(self.canvas.viewport(), center)
             self.app.processEvents()
@@ -97,7 +93,10 @@ class TimelineCanvasSmokeTests(unittest.TestCase):
         self.assertTrue(changed, "clip_changed was not delivered")
         self.assertEqual(changed[-1][0], self.clip["id"])
         self.assertTrue(
-            any(isinstance(scene_item, TimelineClipItem) for scene_item in self.canvas.scene_object.items()),
+            any(
+                isinstance(scene_item, TimelineClipItem)
+                for scene_item in self.canvas.scene_object.items()
+            ),
             "scene refresh did not rebuild clip items",
         )
 
